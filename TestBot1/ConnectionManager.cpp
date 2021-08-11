@@ -1,11 +1,8 @@
 #include "ConnectionManager.h"
 
-ConnectionManager::ConnectionManager(std::wstring token)
-    :token(token)
+ConnectionManager::ConnectionManager(std::wstring token, int intents)
+    :token(token), intents(intents)
 {
-
-    std::string inviteLink = "https://discord.com/oauth2/authorize?client_id=872596938036506704&scope=bot&permissions=1";
-
     uri_builder builder(L"/gateway/bot");
 
     http::http_request request(http::methods::GET);
@@ -14,7 +11,6 @@ ConnectionManager::ConnectionManager(std::wstring token)
     // request.headers().add(L"User-Agent", L"DiscordBot (https://github.com/Bobini/ {0})");
     // request.headers().add(L"X-Ratelimit-Precision", L"millisecond");
     request.headers().add(L"Authorization", L"Bot " + token);
-
     http::client::http_client webClient(L"https://discord.com/api/v7");
     webClient.request(request).then([&](web::http::http_response response)
         {
@@ -37,7 +33,7 @@ ConnectionManager::ConnectionManager(std::wstring token)
             std::wcout << L"Received a message." << std::endl;
             msg.extract_string().then([&](std::string str)
                 {
-                    std::wcout << stringToWstring(str) << std::endl;
+                    std::cout << str << std::endl;
                     json::value msgJson = stringToJson(str);
                     int op;
                     json::value d;
@@ -81,6 +77,11 @@ ConnectionManager::ConnectionManager(std::wstring token)
         { /* Successfully connected. */ });
 }
 
+ConnectionManager::~ConnectionManager()
+{
+    client->close().then([]() { std::wcout << L"Closed the connection." << std::endl; });
+}
+
 void ConnectionManager::dispatch(json::value d, int s, json::value t)
 {
     std::wcout << L"dispatch type: " << t << std::endl << std::endl;
@@ -90,7 +91,7 @@ void ConnectionManager::dispatch(json::value d, int s, json::value t)
     }
     else if (t.as_string() == L"GUILD_CREATE") 
     {
-
+        guilds.push_back(Guild(d));
     }
 }
 
@@ -120,15 +121,14 @@ void ConnectionManager::hello(json::value d)
             // std::wcout << L"Waiting for: " << firstWait.count() << std::endl;
             // while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() < firstWait.count());
 
-            pplx::wait(((((double)rand() / (RAND_MAX)) + 1) * interval).count());
+            pplx::wait(((((double)rand() / (RAND_MAX))) * interval).count());
             while(true)
             {
                 auto start = std::chrono::high_resolution_clock::now();
                 std::wcout << "sending" << std::endl;
                 sendHearbeat();
-                while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() <
-                    interval.count());
-                //pplx::wait(interval.count());
+                //while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() < interval.count());
+                pplx::wait(interval.count());
             }
         });
 
@@ -145,9 +145,9 @@ void ConnectionManager::heartbeatACK(json::value d)
     std::wcout << "Heartbeat acknowledged: " << d << std::endl << std::endl;
 }
 
-void ConnectionManager::close()
+std::vector<Guild> ConnectionManager::getGuilds()
 {
-    client->close().then([]() { std::wcout << L"Closed the connection." << std::endl; });
+    return guilds;
 }
 
 json::value ConnectionManager::stringToJson(std::string const& input) {
@@ -193,7 +193,7 @@ void ConnectionManager::identify() {
 
     json::value d;
     d[L"token"] = json::value::string(utility::conversions::to_utf16string(this->token));
-    d[L"intents"] = 1;
+    d[L"intents"] = intents;
     d[L"properties"] = properties;
 
     json::value identity;
@@ -202,7 +202,7 @@ void ConnectionManager::identify() {
 
     out.set_utf8_message(wstringToString(identity.serialize().c_str()));
     try {
-        client->send(out);
+        client->send(out).wait();
     }
     catch (const web::websockets::client::websocket_exception& e) {
         std::wcerr << L"exception!! " << e.what();
