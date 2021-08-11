@@ -12,17 +12,20 @@ ConnectionManager::ConnectionManager(std::wstring token, int intents)
     // request.headers().add(L"X-Ratelimit-Precision", L"millisecond");
     request.headers().add(L"Authorization", L"Bot " + token);
     http::client::http_client webClient(L"https://discord.com/api/v7");
-    webClient.request(request).then([&](web::http::http_response response)
-        {
-            std::wcout << L"response acquired" << std::endl;
-            return response.extract_json();
-        }).then([&](json::value json)
-        {
-            std::wcout << json << std::endl;
+    try {
+        webClient.request(request).then([&](web::http::http_response response)
+            {
+                std::wcout << L"response acquired" << std::endl;
+                return response.extract_json();
+            }).then([&](json::value json)
+                {
+                    std::wcout << json << std::endl;
 
-            utility::string_t url = json.at(L"url").as_string();
-            discordURL = url;
-        }).wait();
+                    utility::string_t url = json.at(L"url").as_string();
+                    discordURL = url;
+                }).wait();
+    }
+    catch (json::json_exception e) { std::wcerr << e.what(); };
 
     std::wcout << discordURL.c_str() << std::endl;
     client = new websocket_callback_client;
@@ -72,9 +75,11 @@ ConnectionManager::ConnectionManager(std::wstring token, int intents)
                 });
         });
     
-
-    client->connect(uri_builder(discordURL).set_query(L"v=7&encoding=json").to_string()).then([]()
-        { /* Successfully connected. */ });
+    try {
+        client->connect(uri_builder(discordURL).set_query(L"v=7&encoding=json").to_string()).then([]()
+            { /* Successfully connected. */ });
+    }
+    catch (websocket_exception e) { std::wcerr << e.what(); }
 }
 
 ConnectionManager::~ConnectionManager()

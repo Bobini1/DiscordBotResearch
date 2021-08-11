@@ -1,7 +1,7 @@
 #include "pch.h"
-#include "../TestBot1/ConnectionManager.h"
-#include "../TestBot1/Guild.h"
-#include "../TestBot1/Channel.h"
+#include "../BotLib/ConnectionManager.h"
+#include "../BotLib/Guild.h"
+#include "../BotLib/Channel.h"
 #include <vector>
 
 TEST(TestCaseName, TestName) {

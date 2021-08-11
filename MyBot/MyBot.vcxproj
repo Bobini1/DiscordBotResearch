@@ -142,6 +142,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ProjectReference Include="..\BotLib\TestBot1.vcxproj">
+      <Project>{5d76631a-4227-4b76-b760-fb223add32b6}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\TestBot1\TestBot1.vcxproj">
       <Project>{5d76631a-4227-4b76-b760-fb223add32b6}</Project>
     </ProjectReference>
