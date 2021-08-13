@@ -13,6 +13,7 @@
 #include <vector>
 #include "Guild.h"
 #include "Channel.h"
+#include "aixlog.hpp"
 #include <cstdio>
 
 using namespace web;

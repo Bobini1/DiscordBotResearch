@@ -15,8 +15,8 @@ int main()
     std::wstring token;
     tokenStream >> token;
     ConnectionManager bot(token, 0b11111111111111);
-    /*std::wcout << L"Guilds: " << bot.getGuilds().size() << std::endl;
+    std::wcout << L"Guilds: " << bot.getGuilds().size() << std::endl;
     pplx::wait(5000);
-    std::wcout << L"Guilds: " << bot.getGuilds().size() << std::endl;*/
+    std::wcout << L"Guilds: " << bot.getGuilds().size() << std::endl;
     while (true);
 }

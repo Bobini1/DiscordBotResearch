@@ -1,25 +1,27 @@
 #include "ConnectionManager.h"
 
 ConnectionManager::ConnectionManager(std::wstring token, int intents)
-    :token(token), intents(intents)
+    :token(token), intents(intents), heartbeat_interval(0)
 {
+    AixLog::Log::init<AixLog::SinkFile>(AixLog::Severity::trace, "C:/Users/PC/source/repos/TestBot1/logfile.log");
+
+    LOG(INFO) << "Logging!" << std::endl;
+
     uri_builder builder(L"/gateway/bot");
 
     http::http_request request(http::methods::GET);
 
     request.set_request_uri(L"/gateway/bot");
-    // request.headers().add(L"User-Agent", L"DiscordBot (https://github.com/Bobini/ {0})");
-    // request.headers().add(L"X-Ratelimit-Precision", L"millisecond");
     request.headers().add(L"Authorization", L"Bot " + token);
     http::client::http_client webClient(L"https://discord.com/api/v7");
     try {
         webClient.request(request).then([&](web::http::http_response response)
             {
-                std::wcout << L"response acquired" << std::endl;
+                LOG(INFO) << "response acquired" << std::endl;
                 return response.extract_json();
             }).then([&](json::value json)
                 {
-                    std::wcout << json << std::endl;
+                    LOG(INFO) << wstringToString(json.serialize().c_str()) << std::endl;
 
                     utility::string_t url = json.at(L"url").as_string();
                     discordURL = url;
@@ -27,16 +29,15 @@ ConnectionManager::ConnectionManager(std::wstring token, int intents)
     }
     catch (json::json_exception e) { std::wcerr << e.what(); };
 
-    std::wcout << discordURL.c_str() << std::endl;
     client = new websocket_callback_client;
 
     websocket_outgoing_message out;
     client->set_message_handler([&](websocket_incoming_message msg)
         {
-            std::wcout << L"Received a message." << std::endl;
+            LOG(INFO) << "Received a message." << std::endl;
             msg.extract_string().then([&](std::string str)
                 {
-                    std::cout << str << std::endl;
+                    LOG(INFO) << str << std::endl;
                     json::value msgJson = stringToJson(str);
                     int op;
                     json::value d;
@@ -79,7 +80,7 @@ ConnectionManager::ConnectionManager(std::wstring token, int intents)
         client->connect(uri_builder(discordURL).set_query(L"v=7&encoding=json").to_string()).then([]()
             { /* Successfully connected. */ });
     }
-    catch (websocket_exception e) { std::wcerr << e.what(); }
+    catch (websocket_exception e) { LOG(ERROR) << e.what() << std::endl; }
 }
 
 ConnectionManager::~ConnectionManager()
@@ -89,7 +90,7 @@ ConnectionManager::~ConnectionManager()
 
 void ConnectionManager::dispatch(json::value d, int s, json::value t)
 {
-    std::wcout << L"dispatch type: " << t << std::endl << std::endl;
+    LOG(INFO) << "dispatch type: " << wstringToString(t.serialize().c_str()) << std::endl;
     if (t.as_string() == L"READY")
     {
 
@@ -102,20 +103,20 @@ void ConnectionManager::dispatch(json::value d, int s, json::value t)
 
 void ConnectionManager::reconnect(json::value d)
 {
-    std::wcout << d << std::endl << std::endl;
+    LOG(INFO) << wstringToString(d.serialize().c_str()) << std::endl;
 }
 
 void ConnectionManager::invalidSession(json::value d)
 {
-    std::wcout << "Invalid session: " << d << std::endl << std::endl;
+    LOG(ERROR) << "Invalid session: " << wstringToString(d.serialize().c_str()) << std::endl;
 }
 
 void ConnectionManager::hello(json::value d)
 {
-    std::wcout << "Hello: " << d << std::endl << std::endl;
+    LOG(INFO) << "Hello: " << wstringToString(d.serialize().c_str()) << std::endl;
     heartbeat_interval = d.at(L"heartbeat_interval").as_integer();
     std::chrono::milliseconds interval(heartbeat_interval);
-    std::wcout << "interval: " << interval.count() << std::endl;
+    LOG(INFO) << "interval: " << interval.count() << std::endl;
 
     pplx::task<void>([=]()
         {
@@ -130,7 +131,7 @@ void ConnectionManager::hello(json::value d)
             while(true)
             {
                 auto start = std::chrono::high_resolution_clock::now();
-                std::wcout << "sending" << std::endl;
+                LOG(INFO) << "sending heartbeat" << std::endl;
                 sendHearbeat();
                 //while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() < interval.count());
                 pplx::wait(interval.count());
@@ -141,13 +142,13 @@ void ConnectionManager::hello(json::value d)
         identify();
     }
     catch (const web::websockets::client::websocket_exception& e) {
-        std::wcerr << e.what();
+        LOG(ERROR) << e.what() << std::endl;
     }
 }
 
 void ConnectionManager::heartbeatACK(json::value d)
 {
-    std::wcout << "Heartbeat acknowledged: " << d << std::endl << std::endl;
+    LOG(INFO) << "Heartbeat acknowledged: " << wstringToString(d.serialize().c_str()) << std::endl;
 }
 
 std::vector<Guild> ConnectionManager::getGuilds()
@@ -179,13 +180,13 @@ void ConnectionManager::sendHearbeat() {
     json::value heartbeat;
     heartbeat[L"op"] = 1;
     heartbeat[L"d"] = sequenceNumber.load();
-    std::wcout << L"sequenceNumber: " << sequenceNumber.load() << std::endl;
+    LOG(INFO) << "sequenceNumber: " << sequenceNumber.load() << std::endl;
     out.set_utf8_message(wstringToString(heartbeat.serialize().c_str()));
     try {
         client->send(out);
     }
     catch (const web::websockets::client::websocket_exception& e) {
-        std::wcerr << L"exception!! " << e.what();
+        LOG(ERROR) << "exception!! " << e.what() << std::endl;
     }
 }
 
@@ -210,6 +211,6 @@ void ConnectionManager::identify() {
         client->send(out).wait();
     }
     catch (const web::websockets::client::websocket_exception& e) {
-        std::wcerr << L"exception!! " << e.what();
+        LOG(ERROR) << "exception!! " << e.what() << std::endl;
     }
 }
