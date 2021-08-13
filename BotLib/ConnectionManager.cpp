@@ -14,6 +14,7 @@ ConnectionManager::ConnectionManager(std::wstring token, int intents)
     request.set_request_uri(L"/gateway/bot");
     request.headers().add(L"Authorization", L"Bot " + token);
     http::client::http_client webClient(L"https://discord.com/api/v7");
+
     try {
         webClient.request(request).then([&](web::http::http_response response)
             {
@@ -21,7 +22,7 @@ ConnectionManager::ConnectionManager(std::wstring token, int intents)
                 return response.extract_json();
             }).then([&](json::value json)
                 {
-                    LOG(INFO) << wstringToString(json.serialize().c_str()) << std::endl;
+                    LOG(INFO) << utility::conversions::utf16_to_utf8(json.serialize().c_str()) << std::endl;
 
                     utility::string_t url = json.at(L"url").as_string();
                     discordURL = url;
@@ -53,12 +54,13 @@ ConnectionManager::ConnectionManager(std::wstring token, int intents)
                     {
                         case 0:
                             try {
-                                sequenceNumber = msgJson.at(L"s").as_integer();
-                                t = msgJson.at(L"t");
+                                if (!msgJson.at(L"s").is_null()) sequenceNumber = msgJson.at(L"s").as_integer();
+                                if (!msgJson.at(L"t").is_null()) t = msgJson.at(L"t");
+                                else t = json::value(L"");
                                 dispatch(d, sequenceNumber, t);
                             }
                             catch (const web::json::json_exception& e){
-                                std::wcerr << e.what();
+                                LOG(ERROR) << e.what();
                             }
                             break;
                         case 7:
@@ -75,45 +77,55 @@ ConnectionManager::ConnectionManager(std::wstring token, int intents)
                     }
                 });
         });
-    
+
     try {
         client->connect(uri_builder(discordURL).set_query(L"v=7&encoding=json").to_string()).then([]()
             { /* Successfully connected. */ });
     }
     catch (websocket_exception e) { LOG(ERROR) << e.what() << std::endl; }
+
+    std::unique_lock<std::mutex> lck(readyMtx);
+    readyWait.wait(lck);
+
+    // what if a GUILD_CREATE comes first? FIXME
+
+    guildsCompleted->wait();
 }
 
 ConnectionManager::~ConnectionManager()
 {
     client->close().then([]() { std::wcout << L"Closed the connection." << std::endl; });
+    delete client;
+    delete guildsCompleted;
 }
 
 void ConnectionManager::dispatch(json::value d, int s, json::value t)
 {
-    LOG(INFO) << "dispatch type: " << wstringToString(t.serialize().c_str()) << std::endl;
+    LOG(INFO) << "dispatch type: " << utility::conversions::utf16_to_utf8(t.serialize().c_str()) << std::endl;
     if (t.as_string() == L"READY")
     {
-
+        ready(d);
     }
     else if (t.as_string() == L"GUILD_CREATE") 
     {
         guilds.push_back(Guild(d));
+        guildsCompleted->count_down();
     }
 }
 
 void ConnectionManager::reconnect(json::value d)
 {
-    LOG(INFO) << wstringToString(d.serialize().c_str()) << std::endl;
+    LOG(INFO) << utility::conversions::utf16_to_utf8(d.serialize().c_str()) << std::endl;
 }
 
 void ConnectionManager::invalidSession(json::value d)
 {
-    LOG(ERROR) << "Invalid session: " << wstringToString(d.serialize().c_str()) << std::endl;
+    LOG(ERROR) << "Invalid session: " << utility::conversions::utf16_to_utf8(d.serialize().c_str()) << std::endl;
 }
 
 void ConnectionManager::hello(json::value d)
 {
-    LOG(INFO) << "Hello: " << wstringToString(d.serialize().c_str()) << std::endl;
+    LOG(INFO) << "Hello: " << utility::conversions::utf16_to_utf8(d.serialize().c_str()) << std::endl;
     heartbeat_interval = d.at(L"heartbeat_interval").as_integer();
     std::chrono::milliseconds interval(heartbeat_interval);
     LOG(INFO) << "interval: " << interval.count() << std::endl;
@@ -148,7 +160,7 @@ void ConnectionManager::hello(json::value d)
 
 void ConnectionManager::heartbeatACK(json::value d)
 {
-    LOG(INFO) << "Heartbeat acknowledged: " << wstringToString(d.serialize().c_str()) << std::endl;
+    LOG(INFO) << "Heartbeat acknowledged: " << utility::conversions::utf16_to_utf8(d.serialize().c_str()) << std::endl;
 }
 
 std::vector<Guild> ConnectionManager::getGuilds()
@@ -158,21 +170,13 @@ std::vector<Guild> ConnectionManager::getGuilds()
 
 json::value ConnectionManager::stringToJson(std::string const& input) {
     utility::stringstream_t s;
-    s << stringToWstring(input);
-    json::value ret = json::value::parse(s);
+    s << utility::conversions::utf8_to_utf16(input);
+    json::value ret;
+    try {
+        ret = json::value::parse(s);
+    }
+    catch (json::json_exception e) { std::wcerr << e.what(); }
     return ret;
-}
-
-std::wstring ConnectionManager::stringToWstring(std::string const& input) {
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    std::wstring wide = converter.from_bytes(input);
-    return wide;
-}
-
-std::string ConnectionManager::wstringToString(std::wstring const& input) {
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    std::string narrow = converter.to_bytes(input);
-    return narrow;
 }
 
 void ConnectionManager::sendHearbeat() {
@@ -181,7 +185,7 @@ void ConnectionManager::sendHearbeat() {
     heartbeat[L"op"] = 1;
     heartbeat[L"d"] = sequenceNumber.load();
     LOG(INFO) << "sequenceNumber: " << sequenceNumber.load() << std::endl;
-    out.set_utf8_message(wstringToString(heartbeat.serialize().c_str()));
+    out.set_utf8_message(utility::conversions::utf16_to_utf8(heartbeat.serialize().c_str()));
     try {
         client->send(out);
     }
@@ -206,11 +210,21 @@ void ConnectionManager::identify() {
     identity[L"op"] = 2;
     identity[L"d"] = d;
 
-    out.set_utf8_message(wstringToString(identity.serialize().c_str()));
+    out.set_utf8_message(utility::conversions::utf16_to_utf8(identity.serialize().c_str()));
     try {
         client->send(out).wait();
     }
     catch (const web::websockets::client::websocket_exception& e) {
         LOG(ERROR) << "exception!! " << e.what() << std::endl;
     }
+}
+
+void ConnectionManager::ready(json::value d)
+{
+    std::unique_lock<std::mutex> lck(readyMtx);
+    targetNumGuilds = d.at(L"guilds").as_array().size();
+    guildsCompleted = new std::latch(targetNumGuilds);
+    sessionID = d.at(L"session_id").as_string();
+    lck.unlock();
+    readyWait.notify_one();
 }

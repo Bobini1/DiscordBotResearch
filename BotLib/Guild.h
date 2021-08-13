@@ -18,12 +18,12 @@ class Guild
 private:
 	std::wstring name;
 	int memberCount;
-	int ID;
+	std::wstring ID;
 	std::vector<Channel> channels;
 	std::vector<Member> members;
 public:
 	Guild(json::value json);
-	int getID();
+	std::wstring getID();
 	int getMemberCount();
 	std::wstring getName();
 	std::vector<Channel> getChannels();

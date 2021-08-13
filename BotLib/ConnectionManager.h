@@ -1,5 +1,4 @@
 #pragma once
-
 #include <iostream>
 #include <cpprest/http_client.h>
 #include <cpprest/filestream.h>
@@ -7,7 +6,6 @@
 #include <cpprest/http_msg.h>
 #include <chrono>
 #include <locale>
-#include <codecvt>
 #include <string>
 #include <atomic>
 #include <vector>
@@ -15,6 +13,12 @@
 #include "Channel.h"
 #include "aixlog.hpp"
 #include <cstdio>
+#include <iostream>
+#include <latch>
+#include <thread>
+#include <condition_variable>
+#include <mutex>
+
 
 using namespace web;
 using namespace web::websockets::client;
@@ -22,11 +26,17 @@ using namespace web::websockets::client;
 class ConnectionManager
 {
 private:
+	std::condition_variable readyWait;
+	std::mutex readyMtx;
+	std::latch* guildsCompleted;
+
 	utility::string_t discordURL;
 	websocket_callback_client* client;
 	int heartbeat_interval;
 	int intents;
+	size_t targetNumGuilds;
 	std::wstring token;
+	std::wstring sessionID;
 	std::atomic<int> sequenceNumber;
 	std::vector<Guild> guilds;
 	void dispatch(json::value d, int s, json::value t);
@@ -36,6 +46,7 @@ private:
 	void heartbeatACK(json::value d);
 	void sendHearbeat();
 	void identify();
+	void ready(json::value d);
 public:
 	ConnectionManager(std::wstring token, int intents);
 	~ConnectionManager();

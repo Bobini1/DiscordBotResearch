@@ -16,11 +16,11 @@ class Channel
 private:
 	std::wstring name;
 	int type;
-	unsigned long long ID;
+	std::wstring ID;
 public:
 	Channel(json::value json);
 	std::wstring getName();
 	int getType();
-	unsigned long long getID();
+	std::wstring getID();
 };
 

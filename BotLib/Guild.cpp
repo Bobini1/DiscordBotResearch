@@ -4,14 +4,14 @@ Guild::Guild(json::value json)
 {
 	name = json.at(L"name").as_string();
 	memberCount = json.at(L"member_count").as_integer();
-	ID = json.at(L"id").as_integer();
+	ID = json.at(L"id").as_string();
 	for (json::value channel : json.at(L"channels").as_array())
 	{
 		channels.push_back(Channel(channel));
 	}
 }
 
-int Guild::getID()
+std::wstring Guild::getID()
 {
 	return ID;
 }
