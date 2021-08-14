@@ -1,47 +1,45 @@
 #include "pch.h"
-#include "../BotLib/ConnectionManager.h"
+#include "../BotLib/Bot.h"
 #include "../BotLib/Guild.h"
 #include "../BotLib/Channel.h"
 #include <vector>
+
+
+class BotTest : public ::testing::Test {
+protected:
+	std::wstring token;
+	Bot* bot;
+	void SetUp() override {
+		std::wfstream tokenStream;
+		tokenStream.open("C:/Users/PC/source/repos/token.txt", std::ios::in);
+		tokenStream >> token;
+		bot = new Bot();
+	}
+
+	void TearDown() override {
+		delete bot;
+	}
+};
 
 TEST(TestCaseName, TestName) {
   EXPECT_EQ(1, 1);
   EXPECT_TRUE(true);
 }
 
-TEST(EstablishingConnection, SendToken) {
-	std::wfstream tokenStream;
-	tokenStream.open("C:/Users/PC/source/repos/token.txt", std::ios::in);
-	std::wstring token;
-	tokenStream >> token;
-	ConnectionManager* bot;
-	ASSERT_NO_FATAL_FAILURE(bot =
-		new ConnectionManager(token, 0b11111111111111))
-		<< "Fatal error encountered while connecting";
-	delete bot;
+TEST_F(BotTest, GettingGuilds) {
+	bot->onReady = [&]() {
+		ASSERT_NE(bot->getGuilds().size(), 0); 
+	};
 }
 
-TEST(GettingInfo, GettingGuilds) {
-	std::wfstream tokenStream;
-	tokenStream.open("C:/Users/PC/source/repos/token.txt", std::ios::in);
-	std::wstring token;
-	tokenStream >> token;
-	ConnectionManager* bot = new ConnectionManager(token, 0b11111111111111);
-	ASSERT_NE(bot->getGuilds().size(), 0);
-	delete bot;
-}
-
-TEST(GettingInfo, GettingChannels) {
-	std::wfstream tokenStream;
-	tokenStream.open("C:/Users/PC/source/repos/token.txt", std::ios::in);
-	std::wstring token;
-	tokenStream >> token;
-	ConnectionManager* bot = new ConnectionManager(token, 0b11111111111111);
-	for (Guild guild : bot->getGuilds())
-	{
-		ASSERT_NE(guild.getChannels().size(), 0);
-	}
-	delete bot;
+TEST_F(BotTest, GettingChannels) {
+	bot->onReady = [&]() {
+		for (Guild guild : bot->getGuilds())
+		{
+			ASSERT_NE(guild.getChannels().size(), 0);
+		}
+	};
+	bot->connect(token, 0b11111111111111);
 }
 
 int main(int argc, char** argv) {

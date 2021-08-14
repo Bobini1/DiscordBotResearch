@@ -152,15 +152,13 @@
     <ClCompile Include="ConnectionManager.cpp" />
     <ClCompile Include="Guild.cpp" />
     <ClCompile Include="Member.cpp" />
-    <ClCompile Include="User.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="aixlog.hpp" />
     <ClInclude Include="Channel.h" />
-    <ClInclude Include="ConnectionManager.h" />
+    <ClInclude Include="Bot.h" />
     <ClInclude Include="Guild.h" />
     <ClInclude Include="Member.h" />
-    <ClInclude Include="User.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="M:\cpp-dotenv\cpp-dotenv-master\.gitignore" />

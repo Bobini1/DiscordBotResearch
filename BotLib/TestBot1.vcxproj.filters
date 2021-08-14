@@ -17,9 +17,6 @@
     <ClCompile Include="Guild.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="User.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Channel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -28,13 +25,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ConnectionManager.h">
+    <ClInclude Include="Bot.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Guild.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="User.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Channel.h">

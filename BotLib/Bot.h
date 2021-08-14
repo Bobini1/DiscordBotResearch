@@ -18,20 +18,23 @@
 #include <thread>
 #include <condition_variable>
 #include <mutex>
+#include <functional>
 
 
 using namespace web;
 using namespace web::websockets::client;
 
-class ConnectionManager
+class Bot
 {
 private:
 	std::condition_variable readyWait;
 	std::mutex readyMtx;
 	std::latch* guildsCompleted;
+	bool readyReceived;
 
 	utility::string_t discordURL;
 	websocket_callback_client* client;
+	http::client::http_client* webClient;
 	int heartbeat_interval;
 	int intents;
 	size_t targetNumGuilds;
@@ -39,6 +42,7 @@ private:
 	std::wstring sessionID;
 	std::atomic<int> sequenceNumber;
 	std::vector<Guild> guilds;
+
 	void dispatch(json::value d, int s, json::value t);
 	void reconnect(json::value d);
 	void invalidSession(json::value d);
@@ -48,10 +52,13 @@ private:
 	void identify();
 	void ready(json::value d);
 public:
-	ConnectionManager(std::wstring token, int intents);
-	~ConnectionManager();
+	std::function<void()> onReady;
+	Bot();
+	~Bot();
+	void connect(std::wstring token, int intents);
 	std::vector<Guild> getGuilds();
+	std::vector<Channel> getChannelsOnGuild(Guild guild);
+
+	std::vector<Channel> getChannelsOnGuild(Guild guild);
 	static json::value stringToJson(std::string const& input);
-	static std::wstring stringToWstring(std::string const& input);
-	static std::string wstringToString(std::wstring const& input);
 };

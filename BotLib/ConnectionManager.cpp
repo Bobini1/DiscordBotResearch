@@ -1,38 +1,18 @@
-#include "ConnectionManager.h"
+#include "Bot.h"
 
-ConnectionManager::ConnectionManager(std::wstring token, int intents)
-    :token(token), intents(intents), heartbeat_interval(0)
+Bot::Bot()
+    :intents(0)
 {
     AixLog::Log::init<AixLog::SinkFile>(AixLog::Severity::trace, "C:/Users/PC/source/repos/TestBot1/logfile.log");
 
+    readyReceived = false;
+    onReady = []() {};
+
     LOG(INFO) << "Logging!" << std::endl;
 
-    uri_builder builder(L"/gateway/bot");
-
-    http::http_request request(http::methods::GET);
-
-    request.set_request_uri(L"/gateway/bot");
-    request.headers().add(L"Authorization", L"Bot " + token);
-    http::client::http_client webClient(L"https://discord.com/api/v7");
-
-    try {
-        webClient.request(request).then([&](web::http::http_response response)
-            {
-                LOG(INFO) << "response acquired" << std::endl;
-                return response.extract_json();
-            }).then([&](json::value json)
-                {
-                    LOG(INFO) << utility::conversions::utf16_to_utf8(json.serialize().c_str()) << std::endl;
-
-                    utility::string_t url = json.at(L"url").as_string();
-                    discordURL = url;
-                }).wait();
-    }
-    catch (json::json_exception e) { std::wcerr << e.what(); };
-
     client = new websocket_callback_client;
+    webClient = new http::client::http_client(L"https://discord.com/api/v7");
 
-    websocket_outgoing_message out;
     client->set_message_handler([&](websocket_incoming_message msg)
         {
             LOG(INFO) << "Received a message." << std::endl;
@@ -77,6 +57,36 @@ ConnectionManager::ConnectionManager(std::wstring token, int intents)
                     }
                 });
         });
+}
+
+void Bot::connect(std::wstring token, int intents)
+{
+    this->token = token;
+    this->intents = intents;
+    uri_builder builder(L"/gateway/bot");
+
+    http::http_request request(http::methods::GET);
+
+    request.set_request_uri(L"/gateway/bot");
+    request.headers().add(L"Authorization", L"Bot " + token);
+
+    try {
+        webClient->request(request).then([&](web::http::http_response response)
+            {
+                LOG(INFO) << "response acquired" << std::endl;
+                return response.extract_json();
+            }).then([&](json::value json)
+                {
+                    LOG(INFO) << utility::conversions::utf16_to_utf8(json.serialize().c_str()) << std::endl;
+
+                    utility::string_t url = json.at(L"url").as_string();
+                    discordURL = url;
+                }).wait();
+    }
+    catch (json::json_exception e) { std::wcerr << e.what(); };
+
+    //In case the user tries to connect more than one time.
+    if (readyReceived) readyReceived = false;
 
     try {
         client->connect(uri_builder(discordURL).set_query(L"v=7&encoding=json").to_string()).then([]()
@@ -85,21 +95,22 @@ ConnectionManager::ConnectionManager(std::wstring token, int intents)
     catch (websocket_exception e) { LOG(ERROR) << e.what() << std::endl; }
 
     std::unique_lock<std::mutex> lck(readyMtx);
-    readyWait.wait(lck);
-
-    // what if a GUILD_CREATE comes first? FIXME
+    while (!readyReceived) readyWait.wait(lck);
 
     guildsCompleted->wait();
+    delete guildsCompleted;
+
+    onReady();
 }
 
-ConnectionManager::~ConnectionManager()
+Bot::~Bot()
 {
     client->close().then([]() { std::wcout << L"Closed the connection." << std::endl; });
     delete client;
-    delete guildsCompleted;
+    delete webClient;
 }
 
-void ConnectionManager::dispatch(json::value d, int s, json::value t)
+void Bot::dispatch(json::value d, int s, json::value t)
 {
     LOG(INFO) << "dispatch type: " << utility::conversions::utf16_to_utf8(t.serialize().c_str()) << std::endl;
     if (t.as_string() == L"READY")
@@ -113,17 +124,17 @@ void ConnectionManager::dispatch(json::value d, int s, json::value t)
     }
 }
 
-void ConnectionManager::reconnect(json::value d)
+void Bot::reconnect(json::value d)
 {
     LOG(INFO) << utility::conversions::utf16_to_utf8(d.serialize().c_str()) << std::endl;
 }
 
-void ConnectionManager::invalidSession(json::value d)
+void Bot::invalidSession(json::value d)
 {
     LOG(ERROR) << "Invalid session: " << utility::conversions::utf16_to_utf8(d.serialize().c_str()) << std::endl;
 }
 
-void ConnectionManager::hello(json::value d)
+void Bot::hello(json::value d)
 {
     LOG(INFO) << "Hello: " << utility::conversions::utf16_to_utf8(d.serialize().c_str()) << std::endl;
     heartbeat_interval = d.at(L"heartbeat_interval").as_integer();
@@ -158,17 +169,17 @@ void ConnectionManager::hello(json::value d)
     }
 }
 
-void ConnectionManager::heartbeatACK(json::value d)
+void Bot::heartbeatACK(json::value d)
 {
     LOG(INFO) << "Heartbeat acknowledged: " << utility::conversions::utf16_to_utf8(d.serialize().c_str()) << std::endl;
 }
 
-std::vector<Guild> ConnectionManager::getGuilds()
+std::vector<Guild> Bot::getGuilds()
 {
     return guilds;
 }
 
-json::value ConnectionManager::stringToJson(std::string const& input) {
+json::value Bot::stringToJson(std::string const& input) {
     utility::stringstream_t s;
     s << utility::conversions::utf8_to_utf16(input);
     json::value ret;
@@ -179,7 +190,7 @@ json::value ConnectionManager::stringToJson(std::string const& input) {
     return ret;
 }
 
-void ConnectionManager::sendHearbeat() {
+void Bot::sendHearbeat() {
     websocket_outgoing_message out;
     json::value heartbeat;
     heartbeat[L"op"] = 1;
@@ -194,7 +205,7 @@ void ConnectionManager::sendHearbeat() {
     }
 }
 
-void ConnectionManager::identify() {
+void Bot::identify() {
     websocket_outgoing_message out;
     json::value properties;
     properties[L"$os"] = json::value::string(L"Windows 10");
@@ -219,12 +230,13 @@ void ConnectionManager::identify() {
     }
 }
 
-void ConnectionManager::ready(json::value d)
+void Bot::ready(json::value d)
 {
     std::unique_lock<std::mutex> lck(readyMtx);
     targetNumGuilds = d.at(L"guilds").as_array().size();
     guildsCompleted = new std::latch(targetNumGuilds);
     sessionID = d.at(L"session_id").as_string();
     lck.unlock();
-    readyWait.notify_one();
+    readyReceived = true;
+    readyWait.notify_all();
 }

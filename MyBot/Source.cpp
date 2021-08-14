@@ -2,7 +2,7 @@
 #include <cpprest/http_client.h>
 #include <cpprest/filestream.h>
 #include <cpprest/ws_client.h>
-#include <ConnectionManager.h>
+#include <Bot.h>
 #include <fstream>
 
 using namespace web;
@@ -14,9 +14,15 @@ int main()
     tokenStream.open("C:/Users/PC/source/repos/token.txt", std::ios::in);
     std::wstring token;
     tokenStream >> token;
-    ConnectionManager bot(token, 0b11111111111111);
-    std::wcout << L"Guilds: " << bot.getGuilds().size() << std::endl;
-    pplx::wait(5000);
-    std::wcout << L"Guilds: " << bot.getGuilds().size() << std::endl;
+    Bot bot;
+    bot.onReady = [&bot]()
+    {
+        std::cout << "READY" << std::endl;
+        std::wcout << L"Guilds: " << bot.getGuilds().size() << std::endl;
+        pplx::wait(5000);
+        std::wcout << L"Guilds: " << bot.getGuilds().size() << std::endl;
+    };
+    bot.connect(token, 0b11111111111111);
+    
     while (true);
 }

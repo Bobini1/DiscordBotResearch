@@ -33,5 +33,5 @@ std::vector<Channel> Guild::getChannels()
 
 std::vector<Member> Guild::getMembers()
 {
-	return members;
+	
 }
