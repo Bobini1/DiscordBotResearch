@@ -5,18 +5,22 @@
 #include <cpprest/ws_client.h>
 #include <cpprest/http_msg.h>
 #include "Channel.h"
+#include "Connector.h"
 #include <vector>
 
 using namespace web;
 using namespace web::websockets::client;
+
+class Connector;
 class Member
 {
 private:
+	std::shared_ptr<Connector> connector;
 	std::wstring username;
 	std::wstring ID;
 	bool bot;
 public:
-	Member(json::value json);
+	Member(json::value json, std::shared_ptr<Connector> connector);
 	std::wstring getUsername();
 	std::wstring getID();
 	bool isBot();

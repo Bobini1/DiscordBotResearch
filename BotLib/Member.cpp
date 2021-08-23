@@ -1,6 +1,7 @@
 #include "Member.h"
 
-Member::Member(json::value json)
+Member::Member(json::value json, std::shared_ptr<Connector> connector)
+	:connector(connector)
 {
 	json::value user = json.at(L"user");
 	username = user.at(L"username").as_string();

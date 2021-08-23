@@ -2,6 +2,7 @@
 #include "../BotLib/Bot.h"
 #include "../BotLib/Guild.h"
 #include "../BotLib/Channel.h"
+#include "../BotLib/Member.h"
 #include <vector>
 
 
@@ -13,7 +14,7 @@ protected:
 		std::wfstream tokenStream;
 		tokenStream.open("C:/Users/PC/source/repos/token.txt", std::ios::in);
 		tokenStream >> token;
-		bot = new Bot();
+		bot = new Bot(token, 0b11111111111111);
 	}
 
 	void TearDown() override {
@@ -34,12 +35,22 @@ TEST_F(BotTest, GettingGuilds) {
 
 TEST_F(BotTest, GettingChannels) {
 	bot->onReady = [&]() {
-		for (Guild guild : bot->getGuilds())
+		for (auto& [id, guild] : bot->getGuilds())
 		{
 			ASSERT_NE(guild.getChannels().size(), 0);
 		}
 	};
-	bot->connect(token, 0b11111111111111);
+	bot->connect();
+}
+
+TEST_F(BotTest, GettingChannels) {
+	bot->onReady = [&]() {
+		for (auto& [id, guild] : bot->getGuilds())
+		{
+			ASSERT_NE(guild.getMembers().size(), 0);
+		}
+	};
+	bot->connect();
 }
 
 int main(int argc, char** argv) {

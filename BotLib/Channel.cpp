@@ -1,6 +1,7 @@
 #include "Channel.h"
 
-Channel::Channel(json::value json)
+Channel::Channel(json::value json, std::shared_ptr<Connector> connector)
+	:connector(connector)
 {
 	name = json.at(L"name").as_string();
 	ID = json.at(L"id").as_string();

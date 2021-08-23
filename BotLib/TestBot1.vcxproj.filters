@@ -11,7 +11,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ConnectionManager.cpp">
+    <ClCompile Include="Connector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Guild.cpp">
@@ -23,9 +23,12 @@
     <ClCompile Include="Member.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Bot.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Bot.h">
+    <ClInclude Include="Connector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Guild.h">
@@ -38,6 +41,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="aixlog.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Bot.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

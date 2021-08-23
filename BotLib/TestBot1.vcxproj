@@ -148,15 +148,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Bot.cpp" />
     <ClCompile Include="Channel.cpp" />
-    <ClCompile Include="ConnectionManager.cpp" />
+    <ClCompile Include="Connector.cpp" />
     <ClCompile Include="Guild.cpp" />
     <ClCompile Include="Member.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="aixlog.hpp" />
-    <ClInclude Include="Channel.h" />
     <ClInclude Include="Bot.h" />
+    <ClInclude Include="Channel.h" />
+    <ClInclude Include="Connector.h" />
     <ClInclude Include="Guild.h" />
     <ClInclude Include="Member.h" />
   </ItemGroup>
