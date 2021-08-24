@@ -12,7 +12,8 @@
 
 using namespace web;
 using namespace web::websockets::client;
-
+namespace Discord
+{
 class Connector;
 
 class Channel
@@ -28,4 +29,4 @@ public:
 	int getType();
 	std::wstring getID();
 };
-
+}

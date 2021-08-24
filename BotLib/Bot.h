@@ -4,21 +4,36 @@
 #include "Guild.h"
 #include "Member.h"
 #include "Channel.h"
-class Connector;
-class Guild;
-class Channel;
+#include <condition_variable>
+#include <mutex>
 
-class Bot
+
+namespace Discord
 {
-private:
-	std::shared_ptr<Connector> connector; 
-	std::wstring token;
-	int intents;
-	std::unordered_map<std::wstring, Guild> guilds;
-public:
-	std::function<void()> onReady;
-	Bot(std::wstring token, int intents);
-	void connect();
-	std::unordered_map<std::wstring, Guild> getGuilds();
-};
 
+	class Connector;
+	class Guild;
+	class Channel;
+	class Bot
+	{
+	private:
+		std::condition_variable finishHeartbeat;
+		std::condition_variable disconnected;
+		std::mutex heartbeatMtx;
+		std::mutex closingMtx;
+		bool finishDestructor;
+		bool closeConnection;
+
+		std::shared_ptr<Connector> connector;
+		std::wstring token;
+		int intents;
+		std::unordered_map<std::wstring, Guild> guilds;
+		std::chrono::milliseconds heartbeat_interval;
+	public:
+		std::function<void()> onReady;
+		Bot(std::wstring token, int intents);
+		~Bot();
+		void connect();
+		std::unordered_map<std::wstring, Guild> getGuilds();
+	};
+}

@@ -11,6 +11,8 @@
 using namespace web;
 using namespace web::websockets::client;
 
+namespace Discord
+{
 class Connector;
 class Member
 {
@@ -25,4 +27,5 @@ public:
 	std::wstring getID();
 	bool isBot();
 };
+}
 

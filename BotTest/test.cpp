@@ -9,12 +9,12 @@
 class BotTest : public ::testing::Test {
 protected:
 	std::wstring token;
-	Bot* bot;
+	Discord::Bot* bot;
 	void SetUp() override {
 		std::wfstream tokenStream;
 		tokenStream.open("C:/Users/PC/source/repos/token.txt", std::ios::in);
 		tokenStream >> token;
-		bot = new Bot(token, 0b11111111111111);
+		bot = new Discord::Bot(token, 0b11111111111111);
 	}
 
 	void TearDown() override {
@@ -43,7 +43,7 @@ TEST_F(BotTest, GettingChannels) {
 	bot->connect();
 }
 
-TEST_F(BotTest, GettingChannels) {
+TEST_F(BotTest, GettingMembers) {
 	bot->onReady = [&]() {
 		for (auto& [id, guild] : bot->getGuilds())
 		{

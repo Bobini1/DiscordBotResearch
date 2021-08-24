@@ -24,6 +24,8 @@
 using namespace web;
 using namespace web::websockets::client;
 
+namespace Discord
+{
 class Guild;
 class Member;
 
@@ -35,7 +37,7 @@ private:
 	std::latch* guildsCompleted;
 	bool readyReceived;
 
-	utility::string_t discordURL;
+	std::wstring discordURL;
 	websocket_callback_client* client;
 	http::client::http_client* webClient;
 	int heartbeat_interval;
@@ -51,15 +53,16 @@ private:
 	void invalidSession(json::value d);
 	void hello(json::value d);
 	void heartbeatACK(json::value d);
-	void sendHearbeat();
 	void identify();
 	void ready(json::value d);
 public:
 	Connector();
 	void handleWebsocketMessage(const websocket_incoming_message& msg);
 	~Connector();
-	void connect(std::wstring token, int intents);
+	void sendHearbeat();
+	std::chrono::milliseconds connect(std::wstring token, int intents);
 	static json::value stringToJson(std::string const& input);
-	json::value request(http::method method, std::wstring route, std::wstring query = L"", json::value json = {});
+	json::value request(http::method method, std::wstring route, std::wstring query = L"", json::value json = json::value(L""));
 	std::unordered_map<std::wstring, Guild> getGuilds();
 };
+}

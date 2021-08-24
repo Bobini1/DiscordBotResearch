@@ -14,6 +14,9 @@
 using namespace web;
 using namespace web::websockets::client;
 
+namespace Discord
+{
+
 class Connector;
 class Channel;
 class Member;
@@ -35,4 +38,5 @@ public:
 	std::unordered_map<std::wstring, Channel> getChannels();
 	std::unordered_map<std::wstring, Member> getMembers();
 };
+}
 
